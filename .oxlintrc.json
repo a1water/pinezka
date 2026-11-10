@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["eslint", "typescript", "unicorn", "oxc", "react"],
+  "categories": { "correctness": "error" },
+  "env": { "browser": true },
+  "ignorePatterns": [
+    "dist/**",
+    "dist-e2e/**",
+    "dev-dist/**",
+    "coverage/**",
+    "playwright-report/**",
+    "test-results/**"
+  ],
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn",
+    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+  }
+}

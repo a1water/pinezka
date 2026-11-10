@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dist-e2e/
+dev-dist/
+coverage/
+playwright-report/
+test-results/
+.vitest/
+*.local
+*.tsbuildinfo
+.DS_Store
+Thumbs.db

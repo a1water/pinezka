@@ -1,0 +1,237 @@
+/* ----- Save status, beside the place name ----- */
+
+.saveStatus {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin: 0;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.saveStatusStrong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.statusWarning {
+  flex: none;
+  color: var(--alert-border);
+}
+
+/* ----- Form ----- */
+
+/* Fills the screen below the top bar, so the tick can sit at the bottom of a short page. */
+.form {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 16px;
+}
+
+.intro {
+  margin: 0;
+  color: var(--muted);
+}
+
+.control {
+  position: relative;
+}
+
+/*
+ * Room for the unit, so typed text never runs under it. The element name is
+ * part of the selector so that this wins over the shared input padding
+ * whichever stylesheet comes first.
+ */
+input.withSuffix {
+  padding-right: 44px;
+}
+
+input.withSuffix[aria-invalid='true'] {
+  padding-right: 43px;
+}
+
+.suffix {
+  position: absolute;
+  top: 0;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  height: 48px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+/*
+ * Grows with the text. `field-sizing` ignores the rows attribute, so the
+ * height of three lines is given here: 3 lines + 24 px padding + 2 px border.
+ * Where `field-sizing` is not supported, rows="3" gives the same height and
+ * longer text scrolls.
+ */
+textarea.notes {
+  min-height: calc(3lh + 26px);
+  padding: 12px;
+  line-height: 1.45;
+  resize: none;
+  field-sizing: content;
+}
+
+.linkField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.openLink {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  min-height: 44px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ----- The tick ----- */
+
+/*
+ * At the bottom of a short page, and held just above the tab bar while a
+ * long page scrolls under it. The page fades out behind its top edge.
+ */
+.dock {
+  position: sticky;
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+  z-index: 2;
+  margin-top: auto;
+  padding: 12px 0 8px;
+  background: linear-gradient(transparent, var(--bg) 12px);
+}
+
+/*
+ * While this bar is on the page it covers more of the bottom than the tab bar
+ * alone. The page has to know, or the line being typed in a long note, and a
+ * field reached with the Tab key, would stay hidden behind it. 112 px is the
+ * bar at its tallest, with the line above the tick, and a little air.
+ */
+:global(html):has(.dock) {
+  scroll-padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 112px);
+}
+
+.dockHint {
+  margin: 0 0 8px;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.doneWrap {
+  position: relative;
+}
+
+.doneBar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 56px;
+  border: 2px solid var(--control);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.doneBar:active {
+  background: color-mix(in srgb, var(--surface) 92%, var(--text));
+}
+
+.doneBar:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.doneBar:has(input:checked):active {
+  background: color-mix(in srgb, var(--accent) 88%, var(--on-accent));
+}
+
+/*
+ * The real checkbox lies over the whole bar and is see-through. A tap
+ * anywhere on the bar lands on it, and a screen reader's touch exploration
+ * finds it where the bar is drawn.
+ */
+.doneInput {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.doneInput:disabled {
+  cursor: default;
+}
+
+/* The checkbox itself is not drawn, so the bar shows where the focus is. */
+.doneBar:has(input:focus-visible) {
+  outline: 3px solid var(--text);
+  outline-offset: 2px;
+}
+
+.doneBar:has(input:disabled) {
+  cursor: default;
+}
+
+.doneBar:has(input:disabled:not(:checked)) {
+  background: var(--cover);
+}
+
+.tickBox {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--control);
+  border-radius: 8px;
+}
+
+.doneBar:has(input:checked) .tickBox {
+  border-color: var(--on-accent);
+}
+
+.tickBox svg {
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+
+.doneBar:has(input:checked) .tickBox svg {
+  opacity: 1;
+  transform: none;
+}
+
+/* Inside the bar's right edge. Taps on it still reach the bar underneath. */
+.doneTag {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+/* On a narrow bar the tag would reach the centred word, so the word moves to the left while the tag is there. */
+.doneWrap:has(.doneTag) .doneBar {
+  justify-content: flex-start;
+  padding-left: 16px;
+}

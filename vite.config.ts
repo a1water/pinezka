@@ -14,6 +14,9 @@ export default defineConfig({
     // Data and backup tests run in Node, where Blobs survive IndexedDB's
     // structured clone. A DOM test environment would silently lose their bytes.
     environment: 'node',
+    // The owner's time zone. The build server's clock runs on UTC, where a
+    // date taken from UTC by mistake looks right and the date tests could not fail.
+    env: { TZ: 'Europe/Warsaw' },
     // Unit tests are *.test.ts(x), next to the code or under tests/.
     // Playwright's files are tests/e2e/*.spec.ts and are not collected here.
     include: ['src/**/*.test.{ts,tsx}', 'tests/**/*.test.{ts,tsx}'],

@@ -67,6 +67,19 @@ describe('collection lookup', () => {
     for (const id of ids) expect(id).not.toContain('/')
   })
 
+  it('keeps the address of the Settings screen free', () => {
+    // A collection's id is its address, and `#/settings` is already a screen.
+    for (const { id } of collections) expect(id).not.toBe('settings')
+  })
+
+  it('uses only ids and keys that can stand in an address as they are', () => {
+    // Addresses are built from the stored place id with no encoding.
+    for (const collection of collections) {
+      expect(collection.id).toMatch(/^[a-z0-9-]+$/)
+      for (const { key } of collection.places) expect(key).toMatch(/^[A-Za-z0-9-]+$/)
+    }
+  })
+
   it('finds a collection by id', () => {
     expect(getCollection('warsaw-districts')).toBe(warsawDistricts)
     expect(getCollection('nowhere')).toBeUndefined()

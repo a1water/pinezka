@@ -7,6 +7,28 @@
   --accent: #c8402f;
   --border: #e2dfd7;
 
+  /*
+   * What each colour means. Pin red (--accent) is "done" and "the tab you are
+   * on"; amber (--alert-*) is "not saved". Red is never an error.
+   * --border is decoration only: anything the user has to find as a control
+   * is drawn with --control. Text on --accent is always --on-accent, and text
+   * on --accent-soft or --cover is --text or --muted, never the accent.
+   * --alert-border is for borders and icons, never for text.
+   */
+  --on-accent: #ffffff;
+  --accent-soft: #fbe9e5;
+  --cover: #ebe8e0;
+  --control: #857f74;
+  --alert-bg: #fdf1cf;
+  --alert-border: #9a6b00;
+
+  --tabbar-h: 56px;
+  --header-h: 56px;
+  --gutter: 16px;
+  /* Side padding of the page: the gutter, or more where the screen has a cut-out. */
+  --edge-left: max(var(--gutter), env(safe-area-inset-left));
+  --edge-right: max(var(--gutter), env(safe-area-inset-right));
+
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.45;
   -webkit-text-size-adjust: 100%;
@@ -20,6 +42,13 @@
     --muted: #a29e94;
     --accent: #ef6a57;
     --border: #33312c;
+
+    --on-accent: #141412;
+    --accent-soft: #3a1f1a;
+    --cover: #2a2925;
+    --control: #858176;
+    --alert-bg: #33290f;
+    --alert-border: #c79a2e;
   }
 }
 
@@ -29,8 +58,66 @@
   box-sizing: border-box;
 }
 
+html {
+  /*
+   * The top bar and the tab bar lie over the page. Without this, moving focus
+   * to a card with a keyboard or a screen reader scrolls it underneath them.
+   * The top bar is taller while it explains a failed save, so the screen's
+   * header reports its real height in --header-now; until it has, the plain
+   * bar is assumed.
+   */
+  scroll-padding-top: var(--header-now, calc(var(--header-h) + env(safe-area-inset-top)));
+  scroll-padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 8px);
+}
+
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* The browser's own placeholder grey is too faint on the dark surface. */
+::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+:focus-visible {
+  outline: 3px solid var(--text);
+  outline-offset: 2px;
+}
+
+/* A screen's heading takes focus only from code, after a change of screen. */
+h1:focus {
+  outline: none;
+}
+
+/* No double-tap zoom delay and no grey flash; pressed states are styled where they matter. */
+a,
+button,
+input,
+textarea,
+label {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+  }
 }

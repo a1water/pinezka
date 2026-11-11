@@ -1,121 +1,107 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect } from 'react'
 import styles from './app.module.css'
-import { placeId, warsawDistricts } from './collections/index.ts'
-import { appDb, getMeta, listPlaces, updatePlace } from './data/db.ts'
-import type { Meta, Place } from './data/types.ts'
+import { collections } from './collections/index.ts'
+import { SaveAlert, ScreenHeader } from './components/screen-header.tsx'
+import { TabBar } from './components/tab-bar.tsx'
+import ui from './components/ui.module.css'
+import { usePlaceStore } from './data/place-store.ts'
+import { DetailScreen } from './features/detail/detail-screen.tsx'
+import { ListScreen } from './features/list/list-screen.tsx'
+import { SettingsScreen } from './features/settings/settings-screen.tsx'
+import { lastNavigation, listHash, parseRoute, placeHash, savedScroll, useRoute } from './router.ts'
+import type { Route } from './router.ts'
 
-// A plain screen for checking the data layer on the phone. The real district
-// list and detail screens replace it in the next milestone.
-
-type Loaded = { places: Map<string, Place>; meta: Meta }
-
-async function load(): Promise<Loaded> {
-  const db = await appDb()
-  const [places, meta] = await Promise.all([listPlaces(db, warsawDistricts.id), getMeta(db)])
-  return { places: new Map(places.map((place) => [place.id, place])), meta }
+function screenTitle(route: Route): string {
+  switch (route.name) {
+    case 'list':
+      return route.collection.title
+    case 'place':
+      return route.place.name
+    case 'settings':
+      return 'Settings'
+    case 'not-found':
+      return 'Page not found'
+  }
 }
 
-function describe(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
-}
-
-function when(timestamp: string | null): string {
-  return timestamp ? new Date(timestamp).toLocaleString() : 'nothing yet'
-}
-
+/** The frame around every screen: the screen the address stands for, and the tab bar. */
 export function App() {
-  const [data, setData] = useState<Loaded | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [saving, setSaving] = useState(0)
+  const { hash, route } = useRoute()
+  const status = usePlaceStore((state) => state.status)
+  const needsData = route.name === 'list' || route.name === 'place'
+
+  // After a change of screen: put the page where the user expects it and move
+  // focus into the new screen. A layout effect, so it happens before the
+  // screen is first painted. The saved data is already in memory by then, so
+  // a list is at its full height and can be scrolled back to where it was.
+  useLayoutEffect(() => {
+    const { direction, from } = lastNavigation()
+    // The first screen keeps the browser's own focus, and changing the filter
+    // is not a change of screen.
+    if (direction === 'start' || direction === 'replace') return
+
+    // A screen opened by a link starts at the top; one the user returns to is where they left it.
+    window.scrollTo(0, direction === 'push' ? 0 : (savedScroll() ?? 0))
+
+    // Back from a place to its list: focus the card that was opened, so the
+    // user is exactly where they were. In every other case, and when a filter
+    // hides that card, focus the screen's heading so a screen reader says
+    // which screen this is.
+    const left = parseRoute(from)
+    const card =
+      direction === 'back' && route.name === 'list' && left.name === 'place'
+        ? document.querySelector<HTMLElement>(`main a[href="${placeHash(left.placeId)}"]`)
+        : null
+    const target = card ?? document.querySelector<HTMLElement>('main h1')
+    // The scroll position was just set on purpose; focusing must not move it.
+    target?.focus({ preventScroll: true })
+  }, [hash, route])
 
   useEffect(() => {
-    let current = true
-    load().then(
-      (loaded) => current && setData(loaded),
-      (failure: unknown) => current && setError(describe(failure)),
-    )
-    return () => {
-      current = false
-    }
-  }, [])
-
-  async function setDone(id: string, done: boolean) {
-    // Show the tick at once. If saving fails, the screen goes back to what it showed before.
-    const before = data
-    setData((shown) => {
-      const place = shown?.places.get(id)
-      if (!shown || !place) return shown
-      return { ...shown, places: new Map(shown.places).set(id, { ...place, done }) }
-    })
-    setSaving((count) => count + 1)
-    try {
-      await updatePlace(await appDb(), id, { done })
-      setData(await load())
-      setError(null)
-    } catch (failure) {
-      setError(describe(failure))
-      setData(await load().catch(() => before))
-    } finally {
-      setSaving((count) => count - 1)
-    }
-  }
-
-  const doneCount = data ? [...data.places.values()].filter((place) => place.done).length : 0
+    document.title = `${screenTitle(route)} – Pinezka`
+  }, [route])
 
   return (
-    <main className={styles.page}>
-      <header className={styles.header}>
-        <svg className={styles.pin} viewBox="0 0 64 64" aria-hidden="true">
-          <path d="M32 4c-11 0-20 8.7-20 19.5C12 38 32 60 32 60s20-22 20-36.5C52 12.7 43 4 32 4z" />
-          <circle cx="32" cy="23.5" r="7.5" />
-        </svg>
-        <h1 className={styles.title}>Pinezka</h1>
-      </header>
+    <div className={styles.shell}>
+      <main className={styles.main} aria-busy={needsData && status === 'loading'}>
+        <Screen route={route} />
+      </main>
+      <TabBar route={route} />
+      <SaveAlert />
+    </div>
+  )
+}
 
-      {error && (
-        <p className={styles.error} role="alert">
-          Something went wrong with the saved data: {error}
-        </p>
+function Screen({ route }: { route: Route }) {
+  switch (route.name) {
+    // The keys give every collection and every place a fresh screen, so text
+    // being typed for one place can never show up on another.
+    case 'list':
+      return <ListScreen key={route.collection.id} collection={route.collection} show={route.show} />
+    case 'place':
+      return (
+        <DetailScreen key={route.placeId} collection={route.collection} place={route.place} placeId={route.placeId} />
+      )
+    case 'settings':
+      return <SettingsScreen />
+    case 'not-found':
+      return <NotFound />
+  }
+}
+
+/** An address that matches nothing. It says so and offers the way out; it never redirects by itself. */
+function NotFound() {
+  const home = collections[0]
+
+  return (
+    <>
+      <ScreenHeader title="Page not found" />
+      <p className={styles.notFound}>This link does not match anything in Pinezka.</p>
+      {home && (
+        <a className={`${ui.button} ${styles.notFoundLink}`} href={listHash(home.id)}>
+          Go to {home.title}
+        </a>
       )}
-
-      {data && (
-        <>
-          <p className={styles.lead}>
-            Tick a few districts, close this tab and open it again. The ticks should still be there.
-          </p>
-          <dl className={styles.facts}>
-            <dt>Districts done</dt>
-            <dd>
-              {doneCount} of {warsawDistricts.places.length}
-            </dd>
-            <dt>Data created</dt>
-            <dd>{when(data.meta.createdAt)}</dd>
-            <dt>Last change</dt>
-            <dd>{when(data.meta.lastChangeAt)}</dd>
-            <dt>Status</dt>
-            <dd role="status">{saving > 0 ? 'Saving…' : error ? 'Not saved' : 'Everything is saved'}</dd>
-          </dl>
-          <ul className={styles.list}>
-            {warsawDistricts.places.map(({ key, name }) => {
-              const id = placeId(warsawDistricts.id, key)
-              return (
-                <li key={key}>
-                  <label className={styles.row}>
-                    <input
-                      type="checkbox"
-                      checked={data.places.get(id)?.done ?? false}
-                      onChange={(event) => void setDone(id, event.target.checked)}
-                    />
-                    {name}
-                  </label>
-                </li>
-              )
-            })}
-          </ul>
-        </>
-      )}
-
-      <p className={styles.build}>Build {__BUILD_ID__}</p>
-    </main>
+    </>
   )
 }

@@ -28,3 +28,31 @@ test('the app opens under the Pages sub-path on a phone screen', async ({ page, 
   expect(outside).toEqual([])
   expect(failed).toEqual([])
 })
+
+test('district data is saved in the browser and survives a reload', async ({ page }) => {
+  await page.goto('./')
+
+  await expect(page.getByRole('checkbox')).toHaveCount(18)
+  await expect(page.getByText('0 of 18')).toBeVisible()
+  await expect(page.getByText('nothing yet')).toBeVisible()
+
+  await page.getByRole('checkbox', { name: 'Praga-Południe' }).check()
+  await page.getByRole('checkbox', { name: 'Żoliborz' }).check()
+  await expect(page.getByText('2 of 18')).toBeVisible()
+  // A tick shows at once and is written a moment later; wait for the write.
+  await expect(page.getByRole('status')).toHaveText('Everything is saved')
+
+  await page.reload()
+
+  await expect(page.getByText('2 of 18')).toBeVisible()
+  await expect(page.getByRole('checkbox', { name: 'Praga-Południe' })).toBeChecked()
+  await expect(page.getByRole('checkbox', { name: 'Żoliborz' })).toBeChecked()
+  await expect(page.getByRole('checkbox', { name: 'Bemowo' })).not.toBeChecked()
+  await expect(page.getByText('nothing yet')).toHaveCount(0)
+
+  await page.getByRole('checkbox', { name: 'Żoliborz' }).uncheck()
+  await expect(page.getByRole('status')).toHaveText('Everything is saved')
+  await page.reload()
+  await expect(page.getByText('1 of 18')).toBeVisible()
+  await expect(page.getByRole('checkbox', { name: 'Żoliborz' })).not.toBeChecked()
+})
